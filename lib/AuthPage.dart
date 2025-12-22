@@ -1,0 +1,296 @@
+import 'package:flutter/material.dart';
+import 'ForgotPasswordPage.dart';
+
+class AuthPage extends StatefulWidget {
+  const AuthPage({super.key});
+
+  @override
+  State<AuthPage> createState() => _AuthPageState();
+}
+
+class _AuthPageState extends State<AuthPage> {
+  final _formKey = GlobalKey<FormState>();
+  bool isLogin = true;
+  bool rememberMe = false;
+
+  final usernameController = TextEditingController();
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+
+  InputDecoration inputDecoration(String hint) {
+    return InputDecoration(
+      hintText: hint,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: const BorderSide(color: Colors.grey),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: const BorderSide(color: Colors.black),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(30),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 40),
+                Text(
+                  isLogin ? "Login Account" : "Sign up now",
+                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  isLogin
+                      ? "Hello, Welcome back to your account."
+                      : "Create a free account",
+                  style: const TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 30),
+
+                /// TOGGLE
+                Container(
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    children: [
+                      toggleButton("Sign Up", !isLogin),
+                      toggleButton("Login", isLogin),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 30),
+
+                if (!isLogin) ...[
+                  const Text("Username"),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: usernameController,
+                    decoration: inputDecoration("Enter Username"),
+                    validator: (v) =>
+                        v == null || v.isEmpty ? "Username is Required" : null,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                const Text("Email Address"),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: emailController,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  decoration: inputDecoration("Enter Email Address"),
+                  validator: (v) {
+                    final email = v?.trim() ?? '';
+                    if (email.isEmpty) return "Email Address is Required";
+                    final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,}$');
+                    if (!emailRegex.hasMatch(email)) return "Enter a valid email address";
+                    return null;
+                  },
+                ),
+                
+
+                const SizedBox(height: 16),
+
+                const Text("Password"),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: passwordController,
+                  autovalidateMode: AutovalidateMode.onUserInteraction,
+                  obscureText: true,
+                  decoration: inputDecoration("Enter Password"),
+                  validator: (v) {
+                    final pass = v ?? '';
+                    if (pass.isEmpty) return "Password is Required";
+                    if (!isLogin) {
+                      final strongRegex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$');
+                      if (!strongRegex.hasMatch(pass)) {
+                        return "Password must be 8+ chars with upper, lower, number & special char";
+                      }
+                    }
+                    return null;
+                  },
+                ),
+
+                if (!isLogin) ...[
+                  const SizedBox(height: 16),
+                  const Text("Confirm Password"),
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: confirmPasswordController,
+                    autovalidateMode: AutovalidateMode.onUserInteraction,
+                    obscureText: true,
+                    decoration: inputDecoration("Re-enter Password"),
+                    validator: (v) {
+                      final pass = v ?? '';
+                      if (pass.isEmpty) return "Password is Required";
+                      if (pass != passwordController.text) return "Passwords do not match";
+                      return null;
+                    },
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+
+                if (isLogin)
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: rememberMe,
+                        onChanged: (v) => setState(() => rememberMe = v!),
+                      ),
+                      const Text("Keep me signed in"),
+                      const Spacer(),
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ForgotPasswordPage(),
+                            ),
+                          );
+                        },
+                        child: const Text(
+                          "Forgot Password?",
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                const SizedBox(height: 30),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 55,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                    ),
+                    onPressed: () {
+                      if (_formKey.currentState!.validate()) {
+                        if (isLogin) {
+                          // Show a dialog for successful login
+                          showDialog<void>(
+                            context: context,
+                            builder: (_) => AlertDialog(
+                              backgroundColor: Colors.green[50],
+                              title: const Text(
+                                'Success',
+                                style: TextStyle(
+                                  color: Color(0xFF2E7D32),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              content: const Text(
+                                'Successfully logged in',
+                                style: TextStyle(color: Colors.black87),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: const Text('OK'),
+                                )
+                              ],
+                            ),
+                          );
+                        } else {
+                          // On sign up show a popup dialog and switch to Login when OK is pressed
+                          showDialog<void>(
+                            context: context,
+                            barrierDismissible: false,
+                            builder: (_) => AlertDialog(
+                              backgroundColor: Colors.green[50],
+                              title: const Text(
+                                'Success',
+                                style: TextStyle(
+                                  color: Color(0xFF2E7D32),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              content: const Text(
+                                'Account created successfully',
+                                style: TextStyle(color: Colors.black87),
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                    setState(() {
+                                      isLogin = true;
+                                      _formKey.currentState?.reset();
+                                    });
+                                    usernameController.clear();
+                                    emailController.clear();
+                                    passwordController.clear();
+                                    confirmPasswordController.clear();
+                                  },
+                                  child: const Text('OK'),
+                                )
+                              ],
+                            ),
+                          );
+                        }
+                      }
+                    },
+                    child: Text(isLogin ? "Login" : "Sign Up"),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget toggleButton(String text, bool selected) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            isLogin = (text == "Login");
+            _formKey.currentState?.reset();
+          });
+        },
+        child: Container(
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: selected ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(30),
+          ),
+          child: Text(
+            text,
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: selected ? Colors.black : Colors.grey,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+}
