@@ -16,7 +16,10 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primaryColor: Colors.black,
         scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'SF Pro Display', // optional
+        fontFamily: 'Helvetica',
+        textTheme: ThemeData.light().textTheme.apply(
+          fontFamily: 'Helvetica',
+        ),
       ),
       home: const AuthPage(),
     );

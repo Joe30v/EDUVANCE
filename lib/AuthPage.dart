@@ -33,7 +33,7 @@ class _AuthPageState extends State<AuthPage> {
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(30),
-        borderSide: const BorderSide(color: Colors.red),
+        borderSide: const BorderSide(color: Color.fromARGB(255, 255, 17, 0)),
       ),
     );
   }
@@ -60,16 +60,25 @@ class _AuthPageState extends State<AuthPage> {
                   isLogin
                       ? "Hello, Welcome back to your account."
                       : "Create a free account",
-                  style: const TextStyle(color: Colors.grey),
+                  style: const TextStyle(color: Colors.grey, fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 30),
 
                 /// TOGGLE
                 Container(
                   height: 50,
+                  padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(30),
+                    border: Border.all(color: const Color.fromARGB(255, 255, 255, 255)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color.fromARGB(31, 129, 129, 129),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
                   child: Row(
                     children: [
@@ -82,7 +91,7 @@ class _AuthPageState extends State<AuthPage> {
                 const SizedBox(height: 30),
 
                 if (!isLogin) ...[
-                  const Text("Username"),
+                  const Text("Username", style: TextStyle(fontSize: 18)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: usernameController,
@@ -93,7 +102,7 @@ class _AuthPageState extends State<AuthPage> {
                   const SizedBox(height: 16),
                 ],
 
-                const Text("Email Address"),
+                const Text("Email Address", style: TextStyle(fontSize: 18)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: emailController,
@@ -111,7 +120,7 @@ class _AuthPageState extends State<AuthPage> {
 
                 const SizedBox(height: 16),
 
-                const Text("Password"),
+                const Text("Password", style: TextStyle(fontSize: 18)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: passwordController,
@@ -133,7 +142,7 @@ class _AuthPageState extends State<AuthPage> {
 
                 if (!isLogin) ...[
                   const SizedBox(height: 16),
-                  const Text("Confirm Password"),
+                  const Text("Confirm Password", style: TextStyle(fontSize: 18)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: confirmPasswordController,
@@ -158,7 +167,7 @@ class _AuthPageState extends State<AuthPage> {
                         value: rememberMe,
                         onChanged: (v) => setState(() => rememberMe = v!),
                       ),
-                      const Text("Keep me signed in"),
+                      const Text("Keep me signed in", style: TextStyle(fontSize: 14)),
                       const Spacer(),
                       GestureDetector(
                         onTap: () {
@@ -171,7 +180,7 @@ class _AuthPageState extends State<AuthPage> {
                         },
                         child: const Text(
                           "Forgot Password?",
-                          style: TextStyle(color: Colors.grey),
+                          style: TextStyle(color: Colors.grey,fontSize: 14),
                         ),
                       ),
                     ],
