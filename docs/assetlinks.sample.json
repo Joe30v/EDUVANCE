@@ -1,0 +1,19 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.example.eduvance",
+      "sha256_cert_fingerprints": [
+        "<SHA256_CERT_FINGERPRINT>"
+      ]
+    }
+  }
+]
+
+/*
+Instructions:
+- Replace <SHA256_CERT_FINGERPRINT> with the SHA-256 fingerprint of your app signing cert (from play console or keytool)
+- Host this file at: https://<your-domain>/.well-known/assetlinks.json
+- Make sure the file is served as application/json
+*/

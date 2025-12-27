@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'SuccessfulResetPasswordPage.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
@@ -80,12 +81,29 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       borderRadius: BorderRadius.circular(30),
                     ),
                   ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
+                  onPressed: () async {
+                    if (!_formKey.currentState!.validate()) return;
+                    final email = emailController.text.trim();
+                    try {
+                      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
                       Navigator.pushReplacement(
                         context,
                         MaterialPageRoute(
                           builder: (_) => const ResetSuccessPage(),
+                        ),
+                      );
+                    } on FirebaseAuthException catch (e) {
+                      showDialog<void>(
+                        context: context,
+                        builder: (_) => AlertDialog(
+                          title: const Text('Error'),
+                          content: Text(e.message ?? 'Unable to send reset email'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: const Text('OK'),
+                            )
+                          ],
                         ),
                       );
                     }

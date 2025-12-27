@@ -1,0 +1,21 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "<PACKAGE_NAME>",
+      "sha256_cert_fingerprints": [
+        "<SHA256_CERT_FINGERPRINT>"
+      ]
+    }
+  }
+]
+
+/*
+Placeholders:
+- Replace <PACKAGE_NAME> with your Android package name (e.g., com.example.eduvance).
+- Replace <SHA256_CERT_FINGERPRINT> with your app signing cert's SHA-256 fingerprint.
+Hosting:
+- Host at: https://<your-domain>/.well-known/assetlinks.json
+- Ensure file is served as application/json.
+*/

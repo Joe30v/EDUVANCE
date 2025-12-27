@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'ForgotPasswordPage.dart';
+import 'OTPPage.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -198,25 +200,31 @@ class _AuthPageState extends State<AuthPage> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        if (isLogin) {
-                          // Show a dialog for successful login
+                    onPressed: () async {
+                      if (!_formKey.currentState!.validate()) return;
+
+                      final email = emailController.text.trim();
+                      final password = passwordController.text;
+
+                      if (isLogin) {
+                        try {
+                          await FirebaseAuth.instance.signInWithEmailAndPassword(
+                            email: email,
+                            password: password,
+                          );
+                          if (!mounted) return;
+                          // Navigate to OTP page to complete secondary verification
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => OTPPage(email: email)),
+                          );
+                        } on FirebaseAuthException catch (e) {
+                          if (!mounted) return;
                           showDialog<void>(
                             context: context,
                             builder: (_) => AlertDialog(
-                              backgroundColor: Colors.green[50],
-                              title: const Text(
-                                'Success',
-                                style: TextStyle(
-                                  color: Color(0xFF2E7D32),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              content: const Text(
-                                'Successfully logged in',
-                                style: TextStyle(color: Colors.black87),
-                              ),
+                              title: const Text('Login failed'),
+                              content: Text(e.message ?? 'Unable to sign in'),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.of(context).pop(),
@@ -225,42 +233,60 @@ class _AuthPageState extends State<AuthPage> {
                               ],
                             ),
                           );
-                        } else {
-                          // On sign up show a popup dialog and switch to Login when OK is pressed
-                          showDialog<void>(
-                            context: context,
-                            barrierDismissible: false,
-                            builder: (_) => AlertDialog(
-                              backgroundColor: Colors.green[50],
-                              title: const Text(
-                                'Success',
-                                style: TextStyle(
-                                  color: Color(0xFF2E7D32),
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              content: const Text(
-                                'Account created successfully',
-                                style: TextStyle(color: Colors.black87),
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () {
-                                    Navigator.of(context).pop();
-                                    setState(() {
-                                      isLogin = true;
-                                      _formKey.currentState?.reset();
-                                    });
-                                    usernameController.clear();
-                                    emailController.clear();
-                                    passwordController.clear();
-                                    confirmPasswordController.clear();
-                                  },
-                                  child: const Text('OK'),
-                                )
-                              ],
-                            ),
+                        }
+                      } else {
+                        try {
+                          await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                            email: email,
+                            password: password,
                           );
+
+                          // After creating the account, sign the user out so they must explicitly
+                          // log in, then switch the UI to the Login view immediately.
+                          await FirebaseAuth.instance.signOut();
+
+                          if (!mounted) return;
+                          setState(() {
+                            isLogin = true;
+                            _formKey.currentState?.reset();
+                          });
+                          usernameController.clear();
+                          emailController.clear();
+                          passwordController.clear();
+                          confirmPasswordController.clear();
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Account created successfully. Please log in.')),
+                          );
+                        } on FirebaseAuthException catch (e) {
+                          if (e.code == 'email-already-in-use') {
+                            // Open Forgot Password page so the user can reset via email.
+                            if (!mounted) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const ForgotPasswordPage(),
+                              ),
+                            );
+
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Email already in use — opened Forgot Password page.')),
+                            );
+                          } else {
+                            showDialog<void>(
+                              context: context,
+                              builder: (_) => AlertDialog(
+                                title: const Text('Sign up failed'),
+                                content: Text(e.message ?? 'Unable to create account'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(),
+                                    child: const Text('OK'),
+                                  )
+                                ],
+                              ),
+                            );
+                          }
                         }
                       }
                     },

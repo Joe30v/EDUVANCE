@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>com.apple.developer.associated-domains</key>
+	<array>
+		<!-- Add your App Links / Universal Links domain below, for example: applinks:reset.yourdomain.com -->
+		<!-- To enable, replace with your domain and enable Associated Domains in Xcode -->
+		<!-- e.g. -->
+		<!-- <string>applinks:reset.yourdomain.com</string> -->
+	</array>
+</dict>
+</plist>

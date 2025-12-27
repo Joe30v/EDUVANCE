@@ -1,0 +1,19 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "<TEAM_ID>.<BUNDLE_ID>",
+        "paths": [ "/" ]
+      }
+    ]
+  }
+}
+
+/*
+Instructions:
+- Replace <TEAM_ID> with your Apple Team ID (from your Apple Developer account)
+- Replace <BUNDLE_ID> with your app bundle id (e.g., com.example.eduvance)
+- Host this file at: https://<your-domain>/.well-known/apple-app-site-association
+- Serve it with Content-Type: application/json and without a .json extension (file name should be exactly 'apple-app-site-association')
+*/
