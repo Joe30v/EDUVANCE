@@ -17,74 +17,88 @@ class _DashboardPageState extends State<DashboardPage> {
   bool _isMenuExpanded = false;
   int _selectedIndex = 0;
   final LayerLink _menuLayerLink = LayerLink();
+  
+  String _displayName = "User";
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize name loading
+    _loadUserName();
+  }
+
+  // --- USERNAME FIX ---
+  // Fetches the name entered during Sign Up
+  Future<void> _loadUserName() async {
+    // 1. Use local data first for speed
+    if (widget.user.displayName != null && widget.user.displayName!.isNotEmpty) {
+      _displayName = widget.user.displayName!;
+    }
+
+    // 2. Reload from server to be 100% sure we have the latest update
+    try {
+      await widget.user.reload();
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (mounted && currentUser?.displayName != null) {
+        setState(() {
+          _displayName = currentUser!.displayName!;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading user name: $e");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // 1. NAME FIX: Use displayName only. If null, use "User". NEVER use email.
-    final String displayName = (widget.user.displayName != null && widget.user.displayName!.isNotEmpty) 
-        ? widget.user.displayName! 
-        : "User"; 
-
     return Scaffold(
+      backgroundColor: Colors.white, // Pure White Background
       extendBodyBehindAppBar: true,
       body: Stack(
         children: [
-          // --- 1. PREMIUM GRADIENT BACKGROUND ---
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [
-                  Color(0xFFC4D7F5), // Soft Apple Blue
-                  Color(0xFFE8EBF2), // Muted Grey-White
-                  Color(0xFFF2F4F8), // Pure White
-                ],
-              ),
-            ),
-          ),
-
-          // --- 2. MAIN LAYOUT (Column) ---
+          // --- MAIN LAYOUT ---
           SafeArea(
-            bottom: false,
+            bottom: false, // Allow content to go behind bottom area
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
               child: Column(
                 children: [
                   const SizedBox(height: 10),
                   
-                  // Header
-                  _buildHeader(displayName),
+                  // Header (Name updates here)
+                  _buildHeader(_displayName),
                   
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 25),
                   
                   // --- TASK CONTAINER (EXPANDED) ---
-                  // Stretches to fill space between Header and Reward Card
+                  // This stretches to fill the middle space
                   Expanded(
-                    child: _buildGlassTaskSection(),
+                    child: _buildLiquidGlassTaskSection(),
                   ),
 
                   const SizedBox(height: 20),
                   
-                  // --- REWARD CARD (Fixed above bottom nav) ---
-                  _buildGlassRewardContainer(),
+                  // --- REWARD CARD ---
+                  _buildLiquidGlassRewardContainer(),
                   
-                  // Spacer to lift everything above the floating nav
-                  const SizedBox(height: 110), 
+                  // --- CRITICAL FIX: BOTTOM SPACER ---
+                  // This 130px height forces the Reward Card UP, 
+                  // so it sits ABOVE the Floating Nav Bar (which is at bottom: 40)
+                  const SizedBox(height: 130), 
                 ],
               ),
             ),
           ),
 
-          // --- 3. FLOATING BOTTOM NAV (Glass) ---
+          // --- FLOATING BOTTOM NAV (Glass) ---
           Positioned(
             left: 0, 
             right: 0,
             bottom: 40,
-            child: Center(child: _buildGlassFloatingBottomNav()),
+            child: Center(child: _buildLiquidGlassFloatingBottomNav()),
           ),
           
-          // --- 4. POPUP MENU (Glass) ---
+          // --- POPUP MENU (Glass) ---
           if (_isMenuExpanded)
             Positioned(
               width: 60, 
@@ -101,29 +115,33 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ==========================================
-  //            APPLE GLASS HELPERS
+  //            LIQUID GLASS HELPER
   // ==========================================
 
-  Widget _buildGlassContainer({required Widget child, required double borderRadius}) {
+  Widget _buildLiquidGlassContainer({
+    required Widget child, 
+    required double borderRadius,
+    double width = double.infinity 
+  }) {
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: BackdropFilter(
-        // Stronger Blur for "Liquid" feel
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20), 
+        filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15), // Smooth Blur
         child: Container(
+          width: width,
           decoration: BoxDecoration(
-            // High transparency (0.4) for that "Liquid Glass" look
-            color: Colors.white.withOpacity(0.40), 
+            // TINT: Subtle Ice Grey (0xFFF3F6F8) creates contrast on White
+            color: const Color(0xFFF3F6F8).withOpacity(0.85), 
             borderRadius: BorderRadius.circular(borderRadius),
             border: Border.all(
-              color: Colors.white.withOpacity(0.6), // Subtle icy border
+              color: Colors.white, 
               width: 1.5
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05), // Very soft shadow
-                blurRadius: 30,
-                offset: const Offset(0, 15),
+                color: Colors.black.withOpacity(0.04), 
+                blurRadius: 20,
+                offset: const Offset(0, 8),
               ),
             ],
           ),
@@ -141,25 +159,24 @@ class _DashboardPageState extends State<DashboardPage> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        // Profile + Name
         Expanded(
           child: GestureDetector(
             onTap: () => print("Profile Clicked"),
             child: Row(
               children: [
-                // Solid Profile (Not Glass, as requested)
+                // --- PROFILE CONTAINER (SOLID WHITE) ---
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: Colors.transparent, 
-                    border: Border.all(color: Colors.black, width: 2),
+                    color: Colors.white, // Solid White background
+                    border: Border.all(color: Colors.black, width: 2), 
                     borderRadius: BorderRadius.circular(14),
                   ),
                   child: const Icon(Icons.person_outline, size: 26, color: Colors.black),
                 ),
                 const SizedBox(width: 15),
                 
-                // Name
+                // Name Display
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -168,7 +185,7 @@ class _DashboardPageState extends State<DashboardPage> {
                         children: [
                           Flexible(
                             child: Text(
-                              userName,
+                              userName, // Displays "oherng0928" or similar
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.black87),
                             ),
@@ -185,7 +202,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         ),
 
-        // Menu Button (Semi-Glass)
+        // Menu Button (Glass)
         CompositedTransformTarget(
           link: _menuLayerLink,
           child: GestureDetector(
@@ -193,7 +210,7 @@ class _DashboardPageState extends State<DashboardPage> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.5),
+                color: const Color(0xFFF3F6F8), 
                 borderRadius: BorderRadius.circular(22),
               ),
               child: const Icon(Icons.more_horiz, color: Colors.black, size: 24),
@@ -205,8 +222,9 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Widget _buildGlassExpandedMenu() {
-    return _buildGlassContainer(
+    return _buildLiquidGlassContainer(
       borderRadius: 30,
+      width: 60,
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 20),
         child: Column(
@@ -231,8 +249,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // --- LIQUID GLASS TASK CONTAINER ---
-  Widget _buildGlassTaskSection() {
-    return _buildGlassContainer(
+  Widget _buildLiquidGlassTaskSection() {
+    return _buildLiquidGlassContainer(
       borderRadius: 35,
       child: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
@@ -242,6 +260,7 @@ class _DashboardPageState extends State<DashboardPage> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) return const Center(child: Text("Error loading tasks"));
+          
           if (snapshot.connectionState == ConnectionState.waiting) {
              return const Center(child: CircularProgressIndicator());
           }
@@ -263,7 +282,6 @@ class _DashboardPageState extends State<DashboardPage> {
             return date.isAfter(DateTime(now.year, now.month, now.day, 23, 59, 59));
           }).toList();
 
-          // Internal scrolling for tasks
           return SingleChildScrollView(
             padding: const EdgeInsets.all(24),
             child: Column(
@@ -302,7 +320,7 @@ class _DashboardPageState extends State<DashboardPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.6), // Slightly frostier than bg
+        color: Colors.white, // Solid White Pill
         border: Border.all(color: Colors.black, width: 1.5), 
         borderRadius: BorderRadius.circular(28),
       ),
@@ -346,8 +364,8 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // --- LIQUID GLASS REWARD CONTAINER ---
-  Widget _buildGlassRewardContainer() {
-    return _buildGlassContainer(
+  Widget _buildLiquidGlassRewardContainer() {
+    return _buildLiquidGlassContainer(
       borderRadius: 40,
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -357,7 +375,7 @@ class _DashboardPageState extends State<DashboardPage> {
               height: 60, width: 60,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle, 
-                color: Color(0xFFCD7F32), 
+                color: Color(0xFFCD7F32), // Bronze
               ),
               child: const Center(child: Icon(Icons.star, color: Colors.white, size: 30)),
             ),
@@ -383,12 +401,11 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // --- LIQUID GLASS BOTTOM NAV ---
-  Widget _buildGlassFloatingBottomNav() {
-    // Constrained width to look like a floating island
+  Widget _buildLiquidGlassFloatingBottomNav() {
     return Container(
       constraints: const BoxConstraints(maxWidth: 340), 
       margin: const EdgeInsets.symmetric(horizontal: 20),
-      child: _buildGlassContainer(
+      child: _buildLiquidGlassContainer(
         borderRadius: 40,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 16),

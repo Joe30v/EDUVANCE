@@ -24,6 +24,8 @@ class _AuthPageState extends State<AuthPage> {
     return InputDecoration(
       hintText: hint,
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      filled: true,
+      fillColor: Colors.grey.shade50,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(30),
@@ -35,7 +37,7 @@ class _AuthPageState extends State<AuthPage> {
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(30),
-        borderSide: const BorderSide(color: Color.fromARGB(255, 255, 17, 0)),
+        borderSide: const BorderSide(color: Colors.red),
       ),
     );
   }
@@ -66,21 +68,14 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 const SizedBox(height: 30),
 
-                // TOGGLE
+                // TOGGLE BUTTON
                 Container(
                   height: 50,
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: Colors.grey.shade200,
+                    color: Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: Colors.white),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Color.fromARGB(31, 129, 129, 129),
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ],
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
                   child: Row(
                     children: [
@@ -92,36 +87,35 @@ class _AuthPageState extends State<AuthPage> {
 
                 const SizedBox(height: 30),
 
+                // USERNAME FIELD (Only for Sign Up)
                 if (!isLogin) ...[
-                  const Text("Username", style: TextStyle(fontSize: 18)),
+                  const Text("Username", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: usernameController,
                     decoration: inputDecoration("Enter Username"),
                     validator: (v) =>
-                        v == null || v.isEmpty ? "Username is Required" : null,
+                        v == null || v.trim().isEmpty ? "Username is Required" : null,
                   ),
                   const SizedBox(height: 16),
                 ],
 
-                const Text("Email Address", style: TextStyle(fontSize: 18)),
+                const Text("Email Address", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: emailController,
                   autovalidateMode: AutovalidateMode.onUserInteraction,
                   decoration: inputDecoration("Enter Email Address"),
                   validator: (v) {
-                    final email = v?.trim() ?? '';
-                    if (email.isEmpty) return "Email Address is Required";
-                    final emailRegex = RegExp(r'^[\w\.\-]+@([\w\-]+\.)+[\w\-]{2,}$');
-                    if (!emailRegex.hasMatch(email)) return "Enter a valid email address";
+                    if (v == null || v.trim().isEmpty) return "Email is Required";
+                    if (!v.contains('@')) return "Enter a valid email";
                     return null;
                   },
                 ),
 
                 const SizedBox(height: 16),
 
-                const Text("Password", style: TextStyle(fontSize: 18)),
+                const Text("Password", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: passwordController,
@@ -129,16 +123,15 @@ class _AuthPageState extends State<AuthPage> {
                   obscureText: true,
                   decoration: inputDecoration("Enter Password"),
                   validator: (v) {
-                    final pass = v ?? '';
-                    if (pass.isEmpty) return "Password is Required";
-                    if (!isLogin && pass.length < 6) return "Password must be 6+ chars";
+                    if (v == null || v.isEmpty) return "Password is Required";
+                    if (!isLogin && v.length < 6) return "Password must be 6+ chars";
                     return null;
                   },
                 ),
 
                 if (!isLogin) ...[
                   const SizedBox(height: 16),
-                  const Text("Confirm Password", style: TextStyle(fontSize: 18)),
+                  const Text("Confirm Password", style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 8),
                   TextFormField(
                     controller: confirmPasswordController,
@@ -159,6 +152,7 @@ class _AuthPageState extends State<AuthPage> {
                     children: [
                       Checkbox(
                         value: rememberMe,
+                        activeColor: Colors.black,
                         onChanged: (v) => setState(() => rememberMe = v!),
                       ),
                       const Text("Keep me signed in", style: TextStyle(fontSize: 14)),
@@ -174,7 +168,7 @@ class _AuthPageState extends State<AuthPage> {
                         },
                         child: const Text(
                           "Forgot Password?",
-                          style: TextStyle(color: Colors.grey, fontSize: 14),
+                          style: TextStyle(color: Colors.grey, fontSize: 14, fontWeight: FontWeight.bold),
                         ),
                       ),
                     ],
@@ -197,28 +191,46 @@ class _AuthPageState extends State<AuthPage> {
                         : () async {
                             if (!_formKey.currentState!.validate()) return;
                             setState(() => _isLoading = true);
-                            
+
                             try {
                               if (isLogin) {
+                                // LOGIN LOGIC
                                 await FirebaseAuth.instance.signInWithEmailAndPassword(
                                   email: emailController.text.trim(),
                                   password: passwordController.text,
                                 );
                               } else {
+                                // SIGN UP LOGIC
                                 UserCredential cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
                                   email: emailController.text.trim(),
                                   password: passwordController.text,
                                 );
+                                
+                                // CRITICAL: Save the username!
                                 await cred.user?.updateDisplayName(usernameController.text.trim());
-                                // We sign out so AuthGate sees the user change properly
+                                await cred.user?.reload(); // Refresh to ensure it's saved locally
+
+                                // Sign out so they can log in fresh (triggers proper data load)
                                 await FirebaseAuth.instance.signOut();
+                                
                                 if (mounted) {
-                                  setState(() { isLogin = true; });
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Account Created! Please Login.")));
+                                  setState(() { 
+                                    isLogin = true; 
+                                    _formKey.currentState?.reset();
+                                    usernameController.clear();
+                                    emailController.clear();
+                                    passwordController.clear();
+                                    confirmPasswordController.clear();
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text("Account Created Successfully! Please Login."))
+                                  );
                                 }
                               }
                             } on FirebaseAuthException catch (e) {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? "Error")));
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text(e.message ?? "Authentication Error"))
+                              );
                             } finally {
                               if (mounted) setState(() => _isLoading = false);
                             }
@@ -227,7 +239,7 @@ class _AuthPageState extends State<AuthPage> {
                         ? const CircularProgressIndicator(color: Colors.white)
                         : Text(
                             isLogin ? "Login" : "Sign Up",
-                            style: const TextStyle(color: Colors.white, fontSize: 16),
+                            style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
                           ),
                   ),
                 ),
@@ -254,11 +266,18 @@ class _AuthPageState extends State<AuthPage> {
           decoration: BoxDecoration(
             color: selected ? Colors.white : Colors.transparent,
             borderRadius: BorderRadius.circular(30),
+            boxShadow: selected ? [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 4,
+                offset: const Offset(0, 2)
+              )
+            ] : null,
           ),
           child: Text(
             text,
             style: TextStyle(
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w700,
               color: selected ? Colors.black : Colors.grey,
             ),
           ),
