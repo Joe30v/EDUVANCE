@@ -34,6 +34,8 @@ dependencies:
   firebase_auth: ^4.19.0
   email_otp: ^2.1.0  # Add this package for email OTP functionality
   mailer: ^6.6.0
+  cloud_firestore: ^4.17.5
+  intl: ^0.20.2
 
 
 dev_dependencies:

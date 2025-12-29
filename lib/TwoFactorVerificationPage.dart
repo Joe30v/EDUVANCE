@@ -1,6 +1,7 @@
+import 'package:eduvance/DashboardPage.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'HomePage.dart'; // ✅ Ensure this points to your Home Page
+
 
 class TwoFactorVerificationPage extends StatefulWidget {
   final String sentOtp;
@@ -39,7 +40,7 @@ class _TwoFactorVerificationPageState extends State<TwoFactorVerificationPage> {
         if (mounted) {
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => const HomePage()),
+            MaterialPageRoute(builder: (context) => const DashboardPage()),
             (route) => false, 
           );
         }

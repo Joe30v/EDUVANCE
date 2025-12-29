@@ -1,8 +1,7 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'ForgotPasswordPage.dart';
-import 'otp_state.dart';
+// import 'otp_state.dart'; // Not strictly needed here
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -15,7 +14,7 @@ class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   bool isLogin = true;
   bool rememberMe = false;
-  bool _isLoading = false; // Added to show spinner on button
+  bool _isLoading = false; 
 
   final usernameController = TextEditingController();
   final emailController = TextEditingController();
@@ -80,7 +79,7 @@ class _AuthPageState extends State<AuthPage> {
                       BoxShadow(
                         color: const Color.fromARGB(31, 129, 129, 129),
                         blurRadius: 4,
-                        offset: Offset(0, 2),
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
@@ -202,7 +201,7 @@ class _AuthPageState extends State<AuthPage> {
                       ),
                     ),
                     onPressed: _isLoading
-                        ? null // Disable button while loading
+                        ? null 
                         : () async {
                             if (!_formKey.currentState!.validate()) return;
 
@@ -218,8 +217,7 @@ class _AuthPageState extends State<AuthPage> {
                                   email: email,
                                   password: password,
                                 );
-                                // Success! No dialog. 
-                                // The auth state change will automatically trigger main.dart
+                                // Success! Main.dart stream will detect this and launch OTP page.
                               } on FirebaseAuthException catch (e) {
                                 if (!mounted) return;
                                 showDialog<void>(
@@ -241,10 +239,13 @@ class _AuthPageState extends State<AuthPage> {
                             } else {
                               // --- SIGN UP LOGIC ---
                               try {
-                                await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                                UserCredential userCred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
                                   email: email,
                                   password: password,
                                 );
+
+                                // ✅ SAVE USERNAME
+                                await userCred.user?.updateDisplayName(usernameController.text.trim());
 
                                 // Sign out so they have to login explicitly
                                 await FirebaseAuth.instance.signOut();

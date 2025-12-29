@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
-import 'otp_state.dart'; // Ensure you have this file created as before
+import 'otp_state.dart'; 
+import 'DashboardPage.dart'; // ✅ Import your Dashboard
 
 class LoginOTPPage extends StatefulWidget {
   final String email;
@@ -71,7 +72,6 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
 
       await send(message, smtpServer);
 
-      // Save to external state state (otp_state.dart)
       setPendingOtp(widget.uid, otp);
       _sentOtp = otp;
 
@@ -98,40 +98,30 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
     }
   }
 
-  // 2. Verify OTP (The Improved Logic)
+  // 2. Verify OTP
   Future<void> _verifyOtp() async {
-    // Dismiss keyboard first for better UX
     FocusScope.of(context).unfocus();
 
     setState(() {
       _isLoading = true;
-      _errorMessage = null; // Clear previous errors
+      _errorMessage = null; 
     });
 
     try {
       final inputOtp = _otpController.text.trim();
-      
-      // Check otp_state first, fallback to local state
       final expectedOtp = getPendingOtpForUid(widget.uid) ?? _sentOtp;
 
-      // Basic Validation
       if (inputOtp.length != 4) {
-        setState(() {
-          _errorMessage = "Please enter the full 4-digit code.";
-        });
+        setState(() => _errorMessage = "Please enter the full 4-digit code.");
         return;
       }
 
-      // Comparison Logic
       if (expectedOtp != null && inputOtp == expectedOtp) {
         // ✅ SUCCESS
-        
-        // Clear pending OTP from state
         clearPendingOtp(widget.uid);
 
         if (!mounted) return;
 
-        // Show Success Message
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Verification successful!'),
@@ -140,29 +130,17 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
           ),
         );
 
-        // Small delay to let user see the success message
-        await Future.delayed(const Duration(milliseconds: 500));
-
-        if (mounted) {
-          // Pop this page to reveal the Home Page
-          Navigator.of(context).pop(); 
-        }
+        // ✅ NAVIGATE TO DASHBOARD
+        // We use pushReplacement to swap the OTP page with the Dashboard
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (_) => DashboardPage(user: FirebaseAuth.instance.currentUser!),
+          ),
+        );
 
       } else {
         // ❌ FAILURE
-        setState(() {
-          _errorMessage = 'Invalid code. Please try again.';
-        });
-        
-        if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Incorrect code'),
-              backgroundColor: Colors.red,
-              duration: Duration(seconds: 2),
-            ),
-          );
-        }
+        setState(() => _errorMessage = 'Invalid code. Please try again.');
       }
     } catch (e) {
       setState(() => _errorMessage = "An error occurred.");
@@ -171,14 +149,11 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
     }
   }
 
-  // 3. Cancel Flow
   Future<void> _cancelAndSignOut() async {
     setState(() => _isLoading = true);
     try {
       clearPendingOtp(widget.uid);
       await FirebaseAuth.instance.signOut();
-      
-      // Go all the way back to the first screen (AuthPage)
       if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -194,10 +169,10 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: _cancelAndSignOut, // Back button also cancels login
+          onPressed: _cancelAndSignOut,
         ),
       ),
-      body: SingleChildScrollView( // Added scroll view for smaller screens
+      body: SingleChildScrollView( 
         padding: const EdgeInsets.all(24.0),
         child: Column(
           children: [
