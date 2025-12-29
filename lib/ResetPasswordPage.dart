@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'SuccessfulResetPasswordPage.dart'; 
+import 'package:http/http.dart' as http; // Need 'http' in pubspec.yaml
+import 'dart:convert';
+import 'dart:io'; // To detect Android vs iOS
 
 class ResetPasswordPage extends StatefulWidget {
   final String email;
@@ -12,74 +13,69 @@ class ResetPasswordPage extends StatefulWidget {
 
 class _ResetPasswordPageState extends State<ResetPasswordPage> {
   final _formKey = GlobalKey<FormState>();
-  final _newPassController = TextEditingController();
+  final _passController = TextEditingController();
   final _confirmPassController = TextEditingController();
   bool _isLoading = false;
 
   Future<void> _updatePassword() async {
     if (!_formKey.currentState!.validate()) return;
+    
     setState(() => _isLoading = true);
-
-    final newPass = _newPassController.text.trim();
+    
+    // ---------------------------------------------------------
+    // 🔗 CONNECT TO YOUR LOCAL NODE.JS SERVER
+    // ---------------------------------------------------------
+    // If you are using a real phone, replace this with your laptop's IP or Ngrok URL
+    // Example: 'http://192.168.1.5:3000/reset-password'
+    String serverUrl = Platform.isAndroid 
+        ? 'http://10.0.2.2:3000/reset-password' 
+        : 'http://localhost:3000/reset-password';
+    // ---------------------------------------------------------
 
     try {
-      final user = FirebaseAuth.instance.currentUser;
+      final response = await http.post(
+        Uri.parse(serverUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': widget.email,
+          'newPassword': _passController.text.trim(),
+        }),
+      );
 
-      if (user != null) {
-        // Attempt real password update for logged-in user
-        await user.updatePassword(newPass);
+      if (!mounted) return;
+
+      if (response.statusCode == 200) {
+         // ✅ Success
+         await showDialog(
+           context: context,
+           barrierDismissible: false,
+           builder: (_) => AlertDialog(
+             title: const Text("Success"),
+             content: const Text("Password updated successfully!"),
+             actions: [
+               TextButton(
+                 onPressed: () {
+                   Navigator.pop(context);
+                   Navigator.popUntil(context, (route) => route.isFirst); // Go back to Login
+                 },
+                 child: const Text("Login Now"),
+               )
+             ],
+           ),
+         );
       } else {
-        // If there's no Firebase user (OTP-only flow), simulate the backend step
-        await Future.delayed(const Duration(seconds: 1));
+         // ❌ Server Error (e.g., user not found)
+         final errorData = jsonDecode(response.body);
+         throw Exception(errorData['error'] ?? "Unknown Error");
       }
-
-      if (!mounted) return;
-
-      // Success: navigate to success page
-      await showDialog<void>(
-        context: context,
-        builder: (_) => AlertDialog(
-          backgroundColor: Colors.green[50],
-          title: const Text('Success', style: TextStyle(color: Color(0xFF2E7D32), fontWeight: FontWeight.bold)),
-          content: const Text('Password updated successfully.'),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('OK'),
-            )
-          ],
-        ),
-      );
-
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const SuccessfulResetPasswordPage()),
-      );
-    } on FirebaseAuthException catch (e) {
-      if (!mounted) return;
-      showDialog<void>(
-        context: context,
-        builder: (_) => AlertDialog(
-          title: const Text('Error'),
-          content: Text(e.message ?? 'Unable to update password'),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
-          ],
-        ),
-      );
     } catch (e) {
       if (!mounted) return;
-      showDialog<void>(
+      showDialog(
         context: context,
         builder: (_) => AlertDialog(
-          title: const Text('Error'),
-          content: Text(e.toString()),
-          actions: [
-            TextButton(onPressed: () => Navigator.of(context).pop(), child: const Text('OK')),
-          ],
+          title: const Text("Connection Error"),
+          content: Text("Could not connect to the backend.\n\nMake sure your Node.js server is running!\n\nDetails: $e"),
+          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text("OK"))],
         ),
       );
     } finally {
@@ -91,44 +87,49 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text("Reset Password"), backgroundColor: Colors.white, foregroundColor: Colors.black, elevation: 0),
+      appBar: AppBar(
+        title: const Text("Set New Password"), 
+        backgroundColor: Colors.white, 
+        elevation: 0, 
+        foregroundColor: Colors.black
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
+              const Text(
+                "Create a strong new password for your account.",
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 30),
+
+              // New Password Field
               TextFormField(
-                controller: _newPassController,
+                controller: _passController,
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: "New Password",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                 ),
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Required';
-                  final pattern = r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[\W_]).{8,}$';
-                  if (!RegExp(pattern).hasMatch(v)) {
-                    return 'Must be 8+ chars and include upper, lower, digit and symbol';
-                  }
-                  return null;
-                },
+                validator: (v) => v!.length < 6 ? "Password must be at least 6 characters" : null,
               ),
               const SizedBox(height: 20),
+
+              // Confirm Password Field
               TextFormField(
                 controller: _confirmPassController,
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: "Confirm Password",
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(30)),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
                 ),
-                validator: (v) {
-                  if (v == null || v.isEmpty) return 'Required';
-                  if (v != _newPassController.text) return 'Mismatch';
-                  return null;
-                },
+                validator: (v) => v != _passController.text ? "Passwords do not match" : null,
               ),
               const SizedBox(height: 40),
+
+              // Submit Button
               SizedBox(
                 width: double.infinity,
                 height: 55,
@@ -138,7 +139,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                   ),
                   onPressed: _isLoading ? null : _updatePassword,
-                  child: const Text("Update Password", style: TextStyle(color: Colors.white)),
+                  child: _isLoading 
+                    ? const CircularProgressIndicator(color: Colors.white) 
+                    : const Text("Update Password", style: TextStyle(color: Colors.white, fontSize: 18)),
                 ),
               ),
             ],

@@ -6,7 +6,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 class TwoFactorVerificationPage extends StatefulWidget {
   final String sentOtp;
   final String userEmail;
-  final String userPassword; // ✅ Needed to perform the final login
+  final String userPassword; 
 
   const TwoFactorVerificationPage({
     super.key, 

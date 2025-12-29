@@ -41,6 +41,34 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
+  // ✅ HELPER FUNCTION: Translates Firebase errors to user-friendly text
+  String _getFriendlyErrorMessage(String errorCode) {
+    switch (errorCode) {
+      case 'user-not-found':
+        return 'No account found with this email. Please sign up first.';
+      case 'wrong-password':
+        return 'Incorrect password. Please try again or reset your password.';
+      case 'invalid-email':
+        return 'The email address format is invalid. Please check for typos.';
+      case 'user-disabled':
+        return 'This account has been disabled. Please contact support.';
+      case 'too-many-requests':
+        return 'Too many login attempts. Please wait a moment and try again.';
+      case 'network-request-failed':
+        return 'Network error. Please check your internet connection.';
+      case 'credential-already-in-use':
+        return 'This email is already associated with another account.';
+      case 'weak-password':
+        return 'The password provided is too weak.';
+      case 'email-already-in-use':
+        return 'An account already exists for that email.';
+      case 'invalid-credential':
+        return 'Invalid credentials. Please check your email and password.';
+      default:
+        return 'An unexpected error occurred ($errorCode). Please try again.';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -220,15 +248,19 @@ class _AuthPageState extends State<AuthPage> {
                                 // Success! Main.dart stream will detect this and launch OTP page.
                               } on FirebaseAuthException catch (e) {
                                 if (!mounted) return;
+                                
+                                // ✅ FIXED: Use friendly error message
+                                String errorMessage = _getFriendlyErrorMessage(e.code);
+
                                 showDialog<void>(
                                   context: context,
                                   builder: (_) => AlertDialog(
-                                    title: const Text('Login failed'),
-                                    content: Text(e.message ?? 'Unable to sign in'),
+                                    title: const Text('Login Failed'),
+                                    content: Text(errorMessage),
                                     actions: [
                                       TextButton(
                                         onPressed: () => Navigator.of(context).pop(),
-                                        child: const Text('OK'),
+                                        child: const Text('OK', style: TextStyle(color: Colors.black)),
                                       )
                                     ],
                                   ),
@@ -277,15 +309,19 @@ class _AuthPageState extends State<AuthPage> {
                                     const SnackBar(content: Text('Email already in use — opened Forgot Password page.')),
                                   );
                                 } else {
+                                  // ✅ FIXED: Use friendly error message for generic sign-up errors too
+                                  if (!mounted) return;
+                                  String errorMessage = _getFriendlyErrorMessage(e.code);
+
                                   showDialog<void>(
                                     context: context,
                                     builder: (_) => AlertDialog(
-                                      title: const Text('Sign up failed'),
-                                      content: Text(e.message ?? 'Unable to create account'),
+                                      title: const Text('Sign Up Failed'),
+                                      content: Text(errorMessage),
                                       actions: [
                                         TextButton(
                                           onPressed: () => Navigator.of(context).pop(),
-                                          child: const Text('OK'),
+                                          child: const Text('OK', style: TextStyle(color: Colors.black)),
                                         )
                                       ],
                                     ),

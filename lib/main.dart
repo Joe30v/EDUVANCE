@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'AuthPage.dart';
 import 'ResetPasswordPage.dart'; 
 import 'LoginOTPPage.dart';
-import 'DashboardPage.dart'; // <--- THIS IMPORT WAS MISSING
+import 'DashboardPage.dart'; 
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -58,7 +58,7 @@ class AuthGate extends StatelessWidget {
           return const AuthPage();
         }
 
-        // Logged In -> Show Home (Wrapped with OTP Logic)
+        // Logged In -> Show Home Wrapper
         return HomeWrapper(currentUser: user);
       },
     );
@@ -74,29 +74,56 @@ class HomeWrapper extends StatefulWidget {
 }
 
 class _HomeWrapperState extends State<HomeWrapper> {
+  // Start as false so the Dashboard is HIDDEN initially
+  bool _isVerified = false; 
+
   @override
   void initState() {
     super.initState();
-    
-    // Push the OTP page on top of the Dashboard
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Navigator.of(context).push(
-          MaterialPageRoute(
-            fullscreenDialog: true, 
-            builder: (_) => LoginOTPPage(
-              email: widget.currentUser.email ?? '', 
-              uid: widget.currentUser.uid
-            ),
-          ),
-        );
+    // Schedule the OTP page push immediately
+    WidgetsBinding.instance.addPostFrameCallback((_) => _startVerification());
+  }
+
+  Future<void> _startVerification() async {
+    if (!mounted) return;
+
+    // Push the OTP Page and WAIT for a result (true/false)
+    final bool? result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        fullscreenDialog: true, 
+        builder: (_) => LoginOTPPage(
+          email: widget.currentUser.email ?? '', 
+          uid: widget.currentUser.uid
+        ),
+      ),
+    );
+
+    // If result is true, it means verification was successful
+    if (result == true && mounted) {
+      setState(() {
+        _isVerified = true;
+      });
+    } else {
+      // If they cancelled or backed out, sign them out so they go back to Login
+      if (FirebaseAuth.instance.currentUser != null) {
+         await FirebaseAuth.instance.signOut();
       }
-    });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Show the Dashboard underneath the OTP popup
-    return DashboardPage(user: widget.currentUser);
+    // 1. If verified, show the Dashboard
+    if (_isVerified) {
+      return DashboardPage(user: widget.currentUser);
+    }
+    
+    // 2. Otherwise, show a plain white loading screen (hides the dashboard)
+    return const Scaffold(
+      backgroundColor: Colors.white,
+      body: Center(
+        child: CircularProgressIndicator(color: Colors.black),
+      ),
+    );
   }
 }

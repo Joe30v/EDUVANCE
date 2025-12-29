@@ -3,8 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mailer/mailer.dart';
 import 'package:mailer/smtp_server.dart';
-import 'otp_state.dart'; 
-import 'DashboardPage.dart'; // ✅ Import your Dashboard
+import 'OTPState.dart'; 
 
 class LoginOTPPage extends StatefulWidget {
   final String email;
@@ -37,7 +36,6 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
   @override
   void initState() {
     super.initState();
-    // Send code automatically when entering this page
     WidgetsBinding.instance.addPostFrameCallback((_) => _sendOtp());
   }
 
@@ -47,7 +45,6 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
     super.dispose();
   }
 
-  // 1. Send OTP Email
   Future<void> _sendOtp() async {
     setState(() => _isLoading = true);
     final target = widget.email.trim();
@@ -72,7 +69,7 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
 
       await send(message, smtpServer);
 
-      setPendingOtp(widget.uid, otp);
+      setPendingOTP(widget.uid, otp);
       _sentOtp = otp;
 
       if (mounted) {
@@ -98,7 +95,6 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
     }
   }
 
-  // 2. Verify OTP
   Future<void> _verifyOtp() async {
     FocusScope.of(context).unfocus();
 
@@ -109,7 +105,7 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
 
     try {
       final inputOtp = _otpController.text.trim();
-      final expectedOtp = getPendingOtpForUid(widget.uid) ?? _sentOtp;
+      final expectedOtp = getPendingOTPForUid(widget.uid) ?? _sentOtp;
 
       if (inputOtp.length != 4) {
         setState(() => _errorMessage = "Please enter the full 4-digit code.");
@@ -118,7 +114,7 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
 
       if (expectedOtp != null && inputOtp == expectedOtp) {
         // ✅ SUCCESS
-        clearPendingOtp(widget.uid);
+        clearPendingOTP(widget.uid);
 
         if (!mounted) return;
 
@@ -130,13 +126,8 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
           ),
         );
 
-        // ✅ NAVIGATE TO DASHBOARD
-        // We use pushReplacement to swap the OTP page with the Dashboard
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => DashboardPage(user: FirebaseAuth.instance.currentUser!),
-          ),
-        );
+        // ✅ KEY CHANGE: Return 'true' to main.dart to unlock Dashboard
+        Navigator.of(context).pop(true);
 
       } else {
         // ❌ FAILURE
@@ -152,8 +143,10 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
   Future<void> _cancelAndSignOut() async {
     setState(() => _isLoading = true);
     try {
-      clearPendingOtp(widget.uid);
+      clearPendingOTP(widget.uid);
       await FirebaseAuth.instance.signOut();
+      
+      // Return false/null to main.dart, indicating verification failed/cancelled
       if (mounted) Navigator.of(context).popUntil((route) => route.isFirst);
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -162,88 +155,95 @@ class _LoginOTPPageState extends State<LoginOTPPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
+    return WillPopScope(
+      // Prevent swiping back; force user to use Cancel button
+      onWillPop: () async {
+        await _cancelAndSignOut();
+        return false; 
+      },
+      child: Scaffold(
         backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: _cancelAndSignOut,
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.black),
+            onPressed: _cancelAndSignOut,
+          ),
         ),
-      ),
-      body: SingleChildScrollView( 
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          children: [
-            const Icon(Icons.mark_email_read_outlined, size: 60, color: Colors.black),
-            const SizedBox(height: 20),
-            
-            const Text('Two-step Verification', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Text(
-              'Enter the verification code sent to\n${widget.email}', 
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.grey, fontSize: 16),
-            ),
-            const SizedBox(height: 32),
+        body: SingleChildScrollView( 
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            children: [
+              const Icon(Icons.mark_email_read_outlined, size: 60, color: Colors.black),
+              const SizedBox(height: 20),
+              
+              const Text('Two-step Verification', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              Text(
+                'Enter the verification code sent to\n${widget.email}', 
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey, fontSize: 16),
+              ),
+              const SizedBox(height: 32),
 
-            TextField(
-              controller: _otpController,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.center,
-              maxLength: 4,
-              style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
-              decoration: InputDecoration(
-                counterText: '',
-                hintText: '0000',
-                hintStyle: TextStyle(color: Colors.grey.shade300, letterSpacing: 4),
-                errorText: _errorMessage,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: Colors.black, width: 2),
+              TextField(
+                controller: _otpController,
+                keyboardType: TextInputType.number,
+                textAlign: TextAlign.center,
+                maxLength: 4,
+                style: const TextStyle(fontSize: 24, letterSpacing: 8, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  counterText: '',
+                  hintText: '0000',
+                  hintStyle: TextStyle(color: Colors.grey.shade300, letterSpacing: 4),
+                  errorText: _errorMessage,
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Colors.black, width: 2),
+                  ),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: _isLoading ? null : _cancelAndSignOut,
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: _isLoading ? null : _cancelAndSignOut,
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      child: const Text('Cancel', style: TextStyle(color: Colors.black)),
                     ),
-                    child: const Text('Cancel', style: TextStyle(color: Colors.black)),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _verifyOtp,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _verifyOtp,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                      ),
+                      child: _isLoading 
+                        ? const SizedBox(height: 16, width:16, child: CircularProgressIndicator(color: Colors.white, strokeWidth:2)) 
+                        : const Text('Verify', style: TextStyle(color: Colors.white)),
                     ),
-                    child: _isLoading 
-                      ? const SizedBox(height: 16, width:16, child: CircularProgressIndicator(color: Colors.white, strokeWidth:2)) 
-                      : const Text('Verify', style: TextStyle(color: Colors.white)),
                   ),
-                ),
-              ],
-            ),
+                ],
+              ),
 
-            const SizedBox(height: 20),
-            TextButton(
-              onPressed: _isLoading ? null : _sendOtp,
-              child: const Text('Didn\'t receive a code? Resend', style: TextStyle(color: Colors.black54)),
-            ),
-          ],
+              const SizedBox(height: 20),
+              TextButton(
+                onPressed: _isLoading ? null : _sendOtp,
+                child: const Text('Didn\'t receive a code? Resend', style: TextStyle(color: Colors.black54)),
+              ),
+            ],
+          ),
         ),
       ),
     );
