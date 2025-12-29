@@ -1,7 +1,8 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'ForgotPasswordPage.dart';
-import 'OTPPage.dart';
+import 'otp_state.dart';
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -14,6 +15,7 @@ class _AuthPageState extends State<AuthPage> {
   final _formKey = GlobalKey<FormState>();
   bool isLogin = true;
   bool rememberMe = false;
+  bool _isLoading = false; // Added to show spinner on button
 
   final usernameController = TextEditingController();
   final emailController = TextEditingController();
@@ -118,7 +120,6 @@ class _AuthPageState extends State<AuthPage> {
                     return null;
                   },
                 ),
-                
 
                 const SizedBox(height: 16),
 
@@ -182,7 +183,7 @@ class _AuthPageState extends State<AuthPage> {
                         },
                         child: const Text(
                           "Forgot Password?",
-                          style: TextStyle(color: Colors.grey,fontSize: 14),
+                          style: TextStyle(color: Colors.grey, fontSize: 14),
                         ),
                       ),
                     ],
@@ -200,97 +201,106 @@ class _AuthPageState extends State<AuthPage> {
                         borderRadius: BorderRadius.circular(30),
                       ),
                     ),
-                    onPressed: () async {
-                      if (!_formKey.currentState!.validate()) return;
+                    onPressed: _isLoading
+                        ? null // Disable button while loading
+                        : () async {
+                            if (!_formKey.currentState!.validate()) return;
 
-                      final email = emailController.text.trim();
-                      final password = passwordController.text;
+                            setState(() => _isLoading = true);
 
-                      if (isLogin) {
-                        try {
-                          await FirebaseAuth.instance.signInWithEmailAndPassword(
-                            email: email,
-                            password: password,
-                          );
-                          if (!mounted) return;
-                          // Navigate to OTP page to complete secondary verification
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(builder: (_) => OTPPage(email: email)),
-                          );
-                        } on FirebaseAuthException catch (e) {
-                          if (!mounted) return;
-                          showDialog<void>(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text('Login failed'),
-                              content: Text(e.message ?? 'Unable to sign in'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(),
-                                  child: const Text('OK'),
-                                )
-                              ],
-                            ),
-                          );
-                        }
-                      } else {
-                        try {
-                          await FirebaseAuth.instance.createUserWithEmailAndPassword(
-                            email: email,
-                            password: password,
-                          );
+                            final email = emailController.text.trim();
+                            final password = passwordController.text;
 
-                          // After creating the account, sign the user out so they must explicitly
-                          // log in, then switch the UI to the Login view immediately.
-                          await FirebaseAuth.instance.signOut();
+                            if (isLogin) {
+                              // --- LOGIN LOGIC ---
+                              try {
+                                await FirebaseAuth.instance.signInWithEmailAndPassword(
+                                  email: email,
+                                  password: password,
+                                );
+                                // Success! No dialog. 
+                                // The auth state change will automatically trigger main.dart
+                              } on FirebaseAuthException catch (e) {
+                                if (!mounted) return;
+                                showDialog<void>(
+                                  context: context,
+                                  builder: (_) => AlertDialog(
+                                    title: const Text('Login failed'),
+                                    content: Text(e.message ?? 'Unable to sign in'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text('OK'),
+                                      )
+                                    ],
+                                  ),
+                                );
+                              } finally {
+                                if (mounted) setState(() => _isLoading = false);
+                              }
+                            } else {
+                              // --- SIGN UP LOGIC ---
+                              try {
+                                await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                                  email: email,
+                                  password: password,
+                                );
 
-                          if (!mounted) return;
-                          setState(() {
-                            isLogin = true;
-                            _formKey.currentState?.reset();
-                          });
-                          usernameController.clear();
-                          emailController.clear();
-                          passwordController.clear();
-                          confirmPasswordController.clear();
+                                // Sign out so they have to login explicitly
+                                await FirebaseAuth.instance.signOut();
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Account created successfully. Please log in.')),
-                          );
-                        } on FirebaseAuthException catch (e) {
-                          if (e.code == 'email-already-in-use') {
-                            // Open Forgot Password page so the user can reset via email.
-                            if (!mounted) return;
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const ForgotPasswordPage(),
-                              ),
-                            );
+                                if (!mounted) return;
+                                setState(() {
+                                  isLogin = true;
+                                  _formKey.currentState?.reset();
+                                });
+                                usernameController.clear();
+                                emailController.clear();
+                                passwordController.clear();
+                                confirmPasswordController.clear();
 
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Email already in use — opened Forgot Password page.')),
-                            );
-                          } else {
-                            showDialog<void>(
-                              context: context,
-                              builder: (_) => AlertDialog(
-                                title: const Text('Sign up failed'),
-                                content: Text(e.message ?? 'Unable to create account'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.of(context).pop(),
-                                    child: const Text('OK'),
-                                  )
-                                ],
-                              ),
-                            );
-                          }
-                        }
-                      }
-                    },
-                    child: Text(isLogin ? "Login" : "Sign Up"),
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Account created successfully. Please log in.')),
+                                );
+                              } on FirebaseAuthException catch (e) {
+                                if (e.code == 'email-already-in-use') {
+                                  if (!mounted) return;
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => const ForgotPasswordPage(),
+                                    ),
+                                  );
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Email already in use — opened Forgot Password page.')),
+                                  );
+                                } else {
+                                  showDialog<void>(
+                                    context: context,
+                                    builder: (_) => AlertDialog(
+                                      title: const Text('Sign up failed'),
+                                      content: Text(e.message ?? 'Unable to create account'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(context).pop(),
+                                          child: const Text('OK'),
+                                        )
+                                      ],
+                                    ),
+                                  );
+                                }
+                              } finally {
+                                if (mounted) setState(() => _isLoading = false);
+                              }
+                            }
+                          },
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : Text(
+                            isLogin ? "Login" : "Sign Up",
+                            style: const TextStyle(color: Colors.white, fontSize: 16),
+                          ),
                   ),
                 ),
               ],
@@ -327,5 +337,4 @@ class _AuthPageState extends State<AuthPage> {
       ),
     );
   }
-
 }

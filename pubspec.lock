@@ -49,14 +49,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.19.1"
-  cupertino_icons:
-    dependency: "direct main"
+  crypto:
+    dependency: transitive
     description:
-      name: cupertino_icons
-      sha256: ba631d1c7f7bef6b729a622b7b752645a2d076dba9976925b8f25725a30e1ee6
+      name: crypto
+      sha256: c8ea0233063ba03258fbcf2ca4d6dadfefe14f02fab57702265467a19f27fadf
       url: "https://pub.dev"
     source: hosted
-    version: "1.0.8"
+    version: "3.0.7"
+  email_otp:
+    dependency: "direct main"
+    description:
+      name: email_otp
+      sha256: c19c35c3df43ca0d5cf763c9cfb682455c0defc629903704cd1ed4dfc21440c1
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.1.2"
   fake_async:
     dependency: transitive
     description:
@@ -69,10 +77,10 @@ packages:
     dependency: "direct main"
     description:
       name: firebase_auth
-      sha256: "279b2773ff61afd9763202cb5582e2b995ee57419d826b9af6517302a59b672f"
+      sha256: cfc2d970829202eca09e2896f0a5aa7c87302817ecc0bdfa954f026046bf10ba
       url: "https://pub.dev"
     source: hosted
-    version: "4.16.0"
+    version: "4.20.0"
   firebase_auth_platform_interface:
     dependency: transitive
     description:
@@ -85,10 +93,10 @@ packages:
     dependency: transitive
     description:
       name: firebase_auth_web
-      sha256: c7b1379ccef7abf4b6816eede67a868c44142198e42350f51c01d8fc03f95a7d
+      sha256: "64e067e763c6378b7e774e872f0f59f6812885e43020e25cde08f42e9459837b"
       url: "https://pub.dev"
     source: hosted
-    version: "5.8.13"
+    version: "5.12.0"
   firebase_core:
     dependency: "direct main"
     description:
@@ -109,10 +117,10 @@ packages:
     dependency: transitive
     description:
       name: firebase_core_web
-      sha256: eb3afccfc452b2b2075acbe0c4b27de62dd596802b4e5e19869c1e926cbb20b3
+      sha256: "362e52457ed2b7b180964769c1e04d1e0ea0259fdf7025fdfedd019d4ae2bd88"
       url: "https://pub.dev"
     source: hosted
-    version: "2.24.0"
+    version: "2.17.5"
   flutter:
     dependency: "direct main"
     description: flutter
@@ -136,6 +144,14 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
+  http:
+    dependency: transitive
+    description:
+      name: http
+      sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.6.0"
   http_parser:
     dependency: transitive
     description:
@@ -144,14 +160,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.1.2"
-  js:
+  intl:
     dependency: transitive
     description:
-      name: js
-      sha256: f2c445dce49627136094980615a031419f7f3eb393237e4ecd97ac15dea343f3
+      name: intl
+      sha256: "3df61194eb431efc39c4ceba583b95633a403f46c9fd341e550ce0bfa50e9aa5"
       url: "https://pub.dev"
     source: hosted
-    version: "0.6.7"
+    version: "0.20.2"
   leak_tracker:
     dependency: transitive
     description:
@@ -184,6 +200,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
+  logging:
+    dependency: transitive
+    description:
+      name: logging
+      sha256: c8245ada5f1717ed44271ed1c26b8ce85ca3228fd2ffdb75468ab01979309d61
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.3.0"
+  mailer:
+    dependency: "direct main"
+    description:
+      name: mailer
+      sha256: c3b934c0e800ddc946167c0123a900eba5acd009abb73648d0191a742542f2b4
+      url: "https://pub.dev"
+    source: hosted
+    version: "6.6.0"
   matcher:
     dependency: transitive
     description:
@@ -208,6 +240,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.17.0"
+  mime:
+    dependency: transitive
+    description:
+      name: mime
+      sha256: "41a20518f0cb1256669420fdba0cd90d21561e560ac240f26ef8322e45bb7ed6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.0.0"
   path:
     dependency: transitive
     description:
@@ -305,10 +345,10 @@ packages:
     dependency: transitive
     description:
       name: web
-      sha256: "868d88a33d8a87b18ffc05f9f030ba328ffefba92d6c127917a2ba740f9cfe4a"
+      sha256: "97da13628db363c635202ad97068d47c5b8aa555808e7a9411963c533b449b27"
       url: "https://pub.dev"
     source: hosted
-    version: "1.1.1"
+    version: "0.5.1"
 sdks:
   dart: ">=3.10.1 <4.0.0"
-  flutter: ">=3.22.0"
+  flutter: ">=3.18.0-18.0.pre.54"
