@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'ForgotPasswordPage.dart';
-// import 'otp_state.dart'; // Not strictly needed here
 
 class AuthPage extends StatefulWidget {
   const AuthPage({super.key});
@@ -41,34 +40,6 @@ class _AuthPageState extends State<AuthPage> {
     );
   }
 
-  // ✅ HELPER FUNCTION: Translates Firebase errors to user-friendly text
-  String _getFriendlyErrorMessage(String errorCode) {
-    switch (errorCode) {
-      case 'user-not-found':
-        return 'No account found with this email. Please sign up first.';
-      case 'wrong-password':
-        return 'Incorrect password. Please try again or reset your password.';
-      case 'invalid-email':
-        return 'The email address format is invalid. Please check for typos.';
-      case 'user-disabled':
-        return 'This account has been disabled. Please contact support.';
-      case 'too-many-requests':
-        return 'Too many login attempts. Please wait a moment and try again.';
-      case 'network-request-failed':
-        return 'Network error. Please check your internet connection.';
-      case 'credential-already-in-use':
-        return 'This email is already associated with another account.';
-      case 'weak-password':
-        return 'The password provided is too weak.';
-      case 'email-already-in-use':
-        return 'An account already exists for that email.';
-      case 'invalid-credential':
-        return 'Invalid credentials. Please check your email and password.';
-      default:
-        return 'An unexpected error occurred ($errorCode). Please try again.';
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -95,19 +66,19 @@ class _AuthPageState extends State<AuthPage> {
                 ),
                 const SizedBox(height: 30),
 
-                /// TOGGLE
+                // TOGGLE
                 Container(
                   height: 50,
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
                     borderRadius: BorderRadius.circular(30),
-                    border: Border.all(color: const Color.fromARGB(255, 255, 255, 255)),
-                    boxShadow: [
+                    border: Border.all(color: Colors.white),
+                    boxShadow: const [
                       BoxShadow(
-                        color: const Color.fromARGB(31, 129, 129, 129),
+                        color: Color.fromARGB(31, 129, 129, 129),
                         blurRadius: 4,
-                        offset: const Offset(0, 2),
+                        offset: Offset(0, 2),
                       ),
                     ],
                   ),
@@ -160,12 +131,7 @@ class _AuthPageState extends State<AuthPage> {
                   validator: (v) {
                     final pass = v ?? '';
                     if (pass.isEmpty) return "Password is Required";
-                    if (!isLogin) {
-                      final strongRegex = RegExp(r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z\d]).{8,}$');
-                      if (!strongRegex.hasMatch(pass)) {
-                        return "Password must be 8+ chars with upper, lower, number & special char";
-                      }
-                    }
+                    if (!isLogin && pass.length < 6) return "Password must be 6+ chars";
                     return null;
                   },
                 ),
@@ -180,9 +146,7 @@ class _AuthPageState extends State<AuthPage> {
                     obscureText: true,
                     decoration: inputDecoration("Re-enter Password"),
                     validator: (v) {
-                      final pass = v ?? '';
-                      if (pass.isEmpty) return "Password is Required";
-                      if (pass != passwordController.text) return "Passwords do not match";
+                      if (v != passwordController.text) return "Passwords do not match";
                       return null;
                     },
                   ),
@@ -232,104 +196,31 @@ class _AuthPageState extends State<AuthPage> {
                         ? null 
                         : () async {
                             if (!_formKey.currentState!.validate()) return;
-
                             setState(() => _isLoading = true);
-
-                            final email = emailController.text.trim();
-                            final password = passwordController.text;
-
-                            if (isLogin) {
-                              // --- LOGIN LOGIC ---
-                              try {
+                            
+                            try {
+                              if (isLogin) {
                                 await FirebaseAuth.instance.signInWithEmailAndPassword(
-                                  email: email,
-                                  password: password,
+                                  email: emailController.text.trim(),
+                                  password: passwordController.text,
                                 );
-                                // Success! Main.dart stream will detect this and launch OTP page.
-                              } on FirebaseAuthException catch (e) {
-                                if (!mounted) return;
-                                
-                                // ✅ FIXED: Use friendly error message
-                                String errorMessage = _getFriendlyErrorMessage(e.code);
-
-                                showDialog<void>(
-                                  context: context,
-                                  builder: (_) => AlertDialog(
-                                    title: const Text('Login Failed'),
-                                    content: Text(errorMessage),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(),
-                                        child: const Text('OK', style: TextStyle(color: Colors.black)),
-                                      )
-                                    ],
-                                  ),
+                              } else {
+                                UserCredential cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                                  email: emailController.text.trim(),
+                                  password: passwordController.text,
                                 );
-                              } finally {
-                                if (mounted) setState(() => _isLoading = false);
-                              }
-                            } else {
-                              // --- SIGN UP LOGIC ---
-                              try {
-                                UserCredential userCred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-                                  email: email,
-                                  password: password,
-                                );
-
-                                // ✅ SAVE USERNAME
-                                await userCred.user?.updateDisplayName(usernameController.text.trim());
-
-                                // Sign out so they have to login explicitly
+                                await cred.user?.updateDisplayName(usernameController.text.trim());
+                                // We sign out so AuthGate sees the user change properly
                                 await FirebaseAuth.instance.signOut();
-
-                                if (!mounted) return;
-                                setState(() {
-                                  isLogin = true;
-                                  _formKey.currentState?.reset();
-                                });
-                                usernameController.clear();
-                                emailController.clear();
-                                passwordController.clear();
-                                confirmPasswordController.clear();
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Account created successfully. Please log in.')),
-                                );
-                              } on FirebaseAuthException catch (e) {
-                                if (e.code == 'email-already-in-use') {
-                                  if (!mounted) return;
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const ForgotPasswordPage(),
-                                    ),
-                                  );
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(content: Text('Email already in use — opened Forgot Password page.')),
-                                  );
-                                } else {
-                                  // ✅ FIXED: Use friendly error message for generic sign-up errors too
-                                  if (!mounted) return;
-                                  String errorMessage = _getFriendlyErrorMessage(e.code);
-
-                                  showDialog<void>(
-                                    context: context,
-                                    builder: (_) => AlertDialog(
-                                      title: const Text('Sign Up Failed'),
-                                      content: Text(errorMessage),
-                                      actions: [
-                                        TextButton(
-                                          onPressed: () => Navigator.of(context).pop(),
-                                          child: const Text('OK', style: TextStyle(color: Colors.black)),
-                                        )
-                                      ],
-                                    ),
-                                  );
+                                if (mounted) {
+                                  setState(() { isLogin = true; });
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Account Created! Please Login.")));
                                 }
-                              } finally {
-                                if (mounted) setState(() => _isLoading = false);
                               }
+                            } on FirebaseAuthException catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? "Error")));
+                            } finally {
+                              if (mounted) setState(() => _isLoading = false);
                             }
                           },
                     child: _isLoading
@@ -340,6 +231,7 @@ class _AuthPageState extends State<AuthPage> {
                           ),
                   ),
                 ),
+                const SizedBox(height: 30),
               ],
             ),
           ),

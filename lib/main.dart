@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'AuthPage.dart';
-import 'ResetPasswordPage.dart'; 
 import 'LoginOTPPage.dart';
 import 'DashboardPage.dart'; 
 
@@ -27,12 +26,12 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       navigatorKey: navigatorKey, 
       debugShowCheckedModeBanner: false,
-      title: 'Auth UI',
+      title: 'Task Master',
       theme: ThemeData(
+        useMaterial3: true,
+        fontFamily: 'Roboto', 
         primaryColor: Colors.black,
         scaffoldBackgroundColor: Colors.white,
-        fontFamily: 'Helvetica',
-        useMaterial3: true,
       ),
       home: const AuthGate(),
     );
@@ -49,16 +48,19 @@ class AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            backgroundColor: Colors.white,
+            body: Center(child: CircularProgressIndicator(color: Colors.black)),
+          );
         }
 
         final user = snapshot.data;
 
         if (user == null) {
-          return const AuthPage();
+          // --- ERROR FIXED HERE (removed 'const') ---
+          return AuthPage(); 
         }
 
-        // Logged In -> Show Home Wrapper
         return HomeWrapper(currentUser: user);
       },
     );
@@ -74,20 +76,23 @@ class HomeWrapper extends StatefulWidget {
 }
 
 class _HomeWrapperState extends State<HomeWrapper> {
-  // Start as false so the Dashboard is HIDDEN initially
   bool _isVerified = false; 
 
   @override
   void initState() {
     super.initState();
-    // Schedule the OTP page push immediately
     WidgetsBinding.instance.addPostFrameCallback((_) => _startVerification());
   }
 
   Future<void> _startVerification() async {
+    try {
+      await widget.currentUser.reload(); 
+    } catch (e) {
+      debugPrint("Error reloading user: $e");
+    }
+
     if (!mounted) return;
 
-    // Push the OTP Page and WAIT for a result (true/false)
     final bool? result = await Navigator.of(context).push(
       MaterialPageRoute(
         fullscreenDialog: true, 
@@ -98,13 +103,13 @@ class _HomeWrapperState extends State<HomeWrapper> {
       ),
     );
 
-    // If result is true, it means verification was successful
-    if (result == true && mounted) {
+    if (!mounted) return;
+
+    if (result == true) {
       setState(() {
         _isVerified = true;
       });
     } else {
-      // If they cancelled or backed out, sign them out so they go back to Login
       if (FirebaseAuth.instance.currentUser != null) {
          await FirebaseAuth.instance.signOut();
       }
@@ -113,12 +118,10 @@ class _HomeWrapperState extends State<HomeWrapper> {
 
   @override
   Widget build(BuildContext context) {
-    // 1. If verified, show the Dashboard
     if (_isVerified) {
-      return DashboardPage(user: widget.currentUser);
+      return DashboardPage(user: FirebaseAuth.instance.currentUser ?? widget.currentUser);
     }
     
-    // 2. Otherwise, show a plain white loading screen (hides the dashboard)
     return const Scaffold(
       backgroundColor: Colors.white,
       body: Center(
