@@ -38,11 +38,17 @@ target 'Runner' do
   end
 end
 
+# --- MERGED POST INSTALL BLOCK ---
 post_install do |installer|
   installer.pods_project.targets.each do |target|
     flutter_additional_ios_build_settings(target)
 
-    # --- FIX 1: Remove unsupported -G flag from BoringSSL-GRPC ---
+    # 1. Set Deployment Target to iOS 13.0 to fix warnings
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+    end
+
+    # 2. FIX: Remove unsupported -G flag from BoringSSL-GRPC
     if target.name == 'BoringSSL-GRPC'
       target.source_build_phase.files.each do |file|
         if file.settings && file.settings['COMPILER_FLAGS']
@@ -54,8 +60,7 @@ post_install do |installer|
     end
   end
 
-  # --- FIX 2: Patch gRPC-Core AND gRPC-C++ 'basic_seq.h' for Xcode 15+ template syntax error ---
-  # We check both possible paths for the file
+  # 3. FIX: Patch gRPC-Core AND gRPC-C++ 'basic_seq.h' for Xcode 15+ compatibility
   grpc_core_path = File.join(installer.sandbox.root, 'gRPC-Core', 'src', 'core', 'lib', 'promise', 'detail', 'basic_seq.h')
   grpc_cpp_path  = File.join(installer.sandbox.root, 'gRPC-C++', 'src', 'core', 'lib', 'promise', 'detail', 'basic_seq.h')
 
@@ -71,14 +76,8 @@ post_install do |installer|
     end
   end
 
-  # Workaround for 'Include of non-modular header' issues
+  # 4. Workaround for 'Include of non-modular header' issues
   installer.pods_project.build_configurations.each do |config|
     config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-  end
-  
-  installer.pods_project.targets.each do |target|
-    target.build_configurations.each do |config|
-      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-    end
   end
 end

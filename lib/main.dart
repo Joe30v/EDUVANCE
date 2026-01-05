@@ -3,7 +3,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'AuthPage.dart';
 import 'LoginOTPPage.dart';
-import 'DashboardPage.dart'; 
+import 'DashboardPage.dart'; // <--- Uncommented this so Dashboard works
+import 'ManageStudySchedule.dart'; 
 
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
@@ -57,7 +58,6 @@ class AuthGate extends StatelessWidget {
         final user = snapshot.data;
 
         if (user == null) {
-          // --- ERROR FIXED HERE (removed 'const') ---
           return AuthPage(); 
         }
 
@@ -119,6 +119,7 @@ class _HomeWrapperState extends State<HomeWrapper> {
   @override
   Widget build(BuildContext context) {
     if (_isVerified) {
+      // --- RESTORED: This is now your main Dashboard again ---
       return DashboardPage(user: FirebaseAuth.instance.currentUser ?? widget.currentUser);
     }
     
